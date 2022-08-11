@@ -62,31 +62,55 @@
       </q-slide-transition>
 
       <q-separator />
+      <div class="q-pa-md">
+        <q-btn-toggle
+          v-model="toggleButton"
+          toggle-color="primary"
+          :options="[
+            { label: 'Local File', value: 'Local' },
+            { label: 'Path To File', value: 'Path' }
+          ]"></q-btn-toggle>
+      </div>
 
       <q-card-section>
-        <q-file
-          v-model="rootFile"
-          label="Select OCA file"
-          accept=".xls,.xlsx"
-          filled />
-        <q-file
-          v-model="referenceFiles"
-          label="Select OCA references files"
-          accept=".xls,.xlsx"
-          multiple />
+        <div v-if="!enableFileFromPath">
+          <q-file
+            v-model="rootFile"
+            label="Select OCA file"
+            accept=".xls,.xlsx"
+            filled />
+          <q-file
+            v-model="referenceFiles"
+            label="Select OCA references files"
+            accept=".xls,.xlsx"
+            multiple />
 
-        <q-file
-          v-model="credentialLayoutFile"
-          label="Select Credential Layout file"
-          accept=".yml,.yaml" />
-        <q-file
-          v-model="formLayoutFile"
-          label="Select Form Layout file"
-          accept=".yml,.yaml" />
+          <q-file
+            v-model="credentialLayoutFile"
+            label="Select Credential Layout file"
+            accept=".yml,.yaml" />
+          <q-file
+            v-model="formLayoutFile"
+            label="Select Form Layout file"
+            accept=".yml,.yaml" />
+        </div>
+        <div v-else>
+          <q-input v-model="rootPath" label="Path to OCA file" filled />
+          <q-input
+            v-model="referencePath"
+            label="Path to OCA references files" />
 
+          <q-input
+            v-model="credentialLayoutPath"
+            label="Path to Credential Layout file" />
+          <q-input v-model="formLayoutPath" label="Path to Form Layout file" />
+        </div>
         <br />
 
-        <q-btn color="primary" :disable="!rootFile" @click="convert">
+        <q-btn
+          color="primary"
+          :disable="!(rootFile || rootPath)"
+          @click="convert">
           Convert
         </q-btn>
         <br />
@@ -99,8 +123,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, getCurrentInstance } from 'vue'
+import { defineComponent, ref, getCurrentInstance, watch } from 'vue'
 import { AxiosInstance } from 'axios'
+import { makeCAZipBundle } from '@/components/makeCAZipBundle'
 
 export default defineComponent({
   name: 'Develop',
@@ -117,26 +142,31 @@ export default defineComponent({
     const credentialLayoutFile = ref()
     const formLayoutFile = ref()
     const convertionResult = ref('')
-
+    const toggleButton = ref('Local')
+    const enableFileFromPath = ref(false)
+    const rootPath = ref()
+    const referencePath = ref()
+    const credentialLayoutPath = ref()
+    const formLayoutPath = ref()
     const ocaConverterUrl = 'https://tool.oca.argo.colossi.network'
 
     /* eslint-disable */
     const convert = async () => {
-      const formData = new FormData()
-      formData.append('file', rootFile.value)
-      referenceFiles.value.forEach((file: File) =>
-        formData.append('referencesFiles[]', file)
-      )
+      if(toggleButton.value == 'Local') {
+        console.log(rootFile.value)
+        const response = await makeCAZipBundle(rootFile.value, referenceFiles.value, credentialLayoutFile.value, formLayoutFile.value)
+      } else {
+        const SPREADSHEET_ID = "1CF1AJqpN93SA3Uu9qSKTlyTNlIZG8dOQcsvIP2V1cOQ";
+        const url = `https://spreadsheets.google.com/feeds/list/d/1igqjNFfCI7t7y5sNzU6z8g-IaA83r0-5qgzC0tNKPSE/od6/public/values?alt=json`;
 
-      if (credentialLayoutFile.value) {
-        formData.append('credentialLayoutFile', credentialLayoutFile.value)
-      }
-      if (formLayoutFile.value) {
-        formData.append('formLayoutFile', formLayoutFile.value)
+        const externRootFile = await $axios
+          .get(
+            `https://spreadsheets.google.com/feeds/worksheets/${SPREADSHEET_ID}/public/full?alt=json`)
+        console.log(externRootFile)
       }
 
-      const response = await $axios.post(ocaConverterUrl, formData)
       resetForm()
+      resetPathForm()
       const responseResult = response.data
       if (responseResult.success) {
         convertionResult.value = `Success! <a href="${ocaConverterUrl}/${responseResult.filename}">Click here to download OCA Bundle</a>`
@@ -150,6 +180,12 @@ export default defineComponent({
     }
     /* eslint-enable */
 
+    watch(toggleButton, () => {
+      enableFileFromPath.value = toggleButton.value == 'Path'
+      resetForm()
+      resetPathForm()
+    })
+
     const resetForm = () => {
       rootFile.value = null
       referenceFiles.value = []
@@ -157,14 +193,27 @@ export default defineComponent({
       formLayoutFile.value = null
     }
 
+    const resetPathForm = () => {
+      rootPath.value = null
+      referencePath.value = null
+      credentialLayoutPath.value = null
+      formLayoutPath.value = null
+    }
+
     return {
+      enableFileFromPath,
+      toggleButton,
       convert,
       converterHelpExpanded,
       convertionResult,
       rootFile,
       referenceFiles,
       credentialLayoutFile,
-      formLayoutFile
+      formLayoutFile,
+      rootPath,
+      referencePath,
+      credentialLayoutPath,
+      formLayoutPath
     }
   }
 })
