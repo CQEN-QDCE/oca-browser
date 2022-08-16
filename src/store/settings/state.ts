@@ -4,6 +4,7 @@ export interface SettingsStateInterface {
   dataVaultUrls: string[]
   ocaRepositoryUrls: string[]
   language: string
+  mediatorUrl: string
 }
 
 function state(): SettingsStateInterface {
@@ -17,7 +18,10 @@ function state(): SettingsStateInterface {
       .env.OCA_REPOSITORY_URLS.split(','),
     // @ts-ignore
     language: (config as Config)
-      .env.DEFAULT_LANGUAGE
+      .env.DEFAULT_LANGUAGE,
+    // @ts-ignore
+    mediatorUrl: (config as Config)
+      .env.DEFAULT_MEDIATOR_URL
   }
   /* eslint-enable */
 }

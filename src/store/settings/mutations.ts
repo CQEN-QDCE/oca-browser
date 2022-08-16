@@ -12,6 +12,10 @@ const mutation: MutationTree<SettingsStateInterface> = {
 
   updateLanguage(state: SettingsStateInterface, value: string) {
     state.language = value
+  },
+
+  updateMediatorUrl(state: SettingsStateInterface, value: string) {
+    state.mediatorUrl = value
   }
 }
 

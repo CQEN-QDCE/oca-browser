@@ -24,10 +24,7 @@
             <ul>
               <li>
                 <b>OCA file [required] (XLS/XLSX)</b><br />
-                <a
-                  href="https://github.com/THCLab/oca-ecosystem/raw/main/examples/template.xlsx">
-                  Download template</a
-                >.
+                <a href="/#/template"> Download template</a>.
               </li>
               <li>
                 <b>OCA references files (XLS/XLSX)</b><br />

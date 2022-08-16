@@ -67,36 +67,23 @@
             </div>
 
             <q-card-section>
-              You can specify your AnonCred Schema to get a template with the
-              attributes of your schema.
+              You can specify your credential definition id to get a template
+              with the attributes of your schema.
             </q-card-section>
             <q-separator />
-            <div
-              v-for="(_, i) in schemaIdentifier"
-              :key="i"
-              class="row items-center">
+            <div class="row items-center">
               <q-icon
                 name="remove_circle_outline"
                 class="col-1 cursor-pointer"
                 size="sm"
                 left
-                @click="removeSchemaIdentifier(i)" />
+                :disabled="true"
+                @click="removeSchemaIdentifier()" />
               <q-input
-                v-model="schemaIdentifier[i].value"
+                v-model="schemaIdentifier"
                 class="col"
-                label="AnonCred/CredDef"
+                label="CredDef"
                 dense />
-            </div>
-            <div
-              v-if="schemaIdentifier.length < 1"
-              class="row items-center"
-              style="height: 40px">
-              <q-icon
-                name="add_circle_outline"
-                class="col-1 cursor-pointer"
-                size="sm"
-                left
-                @click="addSchemaIdentifier" />
             </div>
           </li>
         </ul>
@@ -104,10 +91,8 @@
       <q-card-section>
         <q-btn
           color="primary"
-          :disable="
-            languages.length < 1 || schemaIdentifier[0].value.length < 1
-          "
-          @click="Generate">
+          :disable="languages.length < 1 || schemaIdentifier.length < 1"
+          @click="generateTemplate()">
           Generate
         </q-btn>
       </q-card-section>
@@ -116,14 +101,23 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, Ref, ref, watch } from 'vue'
+import { defineComponent, getCurrentInstance, ref } from 'vue'
+import { AxiosInstance } from 'axios'
+import { useStore } from '@/store'
 
 export default defineComponent({
   name: 'Template',
   setup() {
+    const currentInstance = getCurrentInstance()
+    if (!currentInstance) {
+      return
+    }
+    const $axios = currentInstance.appContext.config.globalProperties
+      .$axios as AxiosInstance
+    const $store = useStore()
     const templateHelpExpanded = ref(true)
     const languages = ref([ref('en')])
-    const schemaIdentifier: Ref<Ref<string>[]> = ref([ref('')])
+    const schemaIdentifier = ref('')
 
     const addLanguage = () => {
       languages.value.push(ref(''))
@@ -133,14 +127,20 @@ export default defineComponent({
       languages.value.splice(i, 1)
     }
 
-    function addSchemaIdentifier() {
-      if (schemaIdentifier.value.length < 1) {
-        schemaIdentifier.value.push(ref(''))
-      }
+    const removeSchemaIdentifier = () => {
+      schemaIdentifier.value = ''
     }
 
-    function removeSchemaIdentifier() {
-      schemaIdentifier.value.splice(0, 1)
+    const generateTemplate = async () => {
+      const credentialDefinitionResponse = await $axios.get(
+        `${$store.state.settings.mediatorUrl}credential-definition/${schemaIdentifier.value}`,
+        {
+          headers: {
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      )
+      console.log(credentialDefinitionResponse)
     }
 
     return {
@@ -149,8 +149,8 @@ export default defineComponent({
       templateHelpExpanded,
       languages,
       schemaIdentifier,
-      addSchemaIdentifier,
-      removeSchemaIdentifier
+      removeSchemaIdentifier,
+      generateTemplate
     }
   }
 })

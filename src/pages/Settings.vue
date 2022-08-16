@@ -144,6 +144,49 @@
               @click="addDataVaultUrl" />
           </div>
         </q-card-section>
+
+        <q-card-section>
+          <div class="row items-center">
+            <div class="text-subtitle1">Mediator URL</div>
+            <q-btn
+              color="grey"
+              round
+              flat
+              dense
+              :icon="mediatorUrlHelpExpanded ? 'help_outline' : 'help'"
+              @click="mediatorUrlHelpExpanded = !mediatorUrlHelpExpanded" />
+          </div>
+
+          <q-slide-transition>
+            <div v-show="mediatorUrlHelpExpanded">
+              <q-separator />
+              <q-card-section class="text-subitle2">
+                Mediator URL let you put the reference path to be able to
+                retrieve your credential definition. You can generate a pre-fill
+                template and validate the attributes of your OCA bundle to be
+                sure it match your schema.
+              </q-card-section>
+            </div>
+          </q-slide-transition>
+
+          <q-separator />
+
+          <div class="row items-center">
+            <q-icon
+              name="remove_circle_outline"
+              class="col-1 cursor-pointer"
+              size="sm"
+              left
+              disabled="true"
+              @click="removeMediatorUrl" />
+            <q-input
+              v-model="mediatorUrl"
+              class="col"
+              label="Mediator URL"
+              dense
+              @blur="storeMediatorUrl" />
+          </div>
+        </q-card-section>
       </q-card-section>
     </q-card>
   </q-page>
@@ -161,6 +204,9 @@ export default defineComponent({
     const languages = ref(l)
     const ocaRepoHelpExpanded = ref(true)
     const dataVaultHelpExpanded = ref(true)
+    const mediatorUrlHelpExpanded = ref(true)
+
+    const mediatorUrl = ref($store.state.settings.mediatorUrl)
 
     const ocaRepositoryUrls = ref(
       $store.state.settings.ocaRepositoryUrls.map(el => ref(el))
@@ -170,6 +216,9 @@ export default defineComponent({
     }
     const removeOcaRepositoryUrl = (i: number) => {
       ocaRepositoryUrls.value.splice(i, 1)
+    }
+    const removeMediatorUrl = () => {
+      mediatorUrl.value = ''
     }
     watch(ocaRepositoryUrls.value, async (value: Ref<string>[]) => {
       await $store.dispatch(
@@ -194,6 +243,13 @@ export default defineComponent({
       )
     })
 
+    const storeMediatorUrl = async () => {
+      if (mediatorUrl.value[mediatorUrl.value.length - 1] != '/') {
+        mediatorUrl.value = mediatorUrl.value + '/'
+      }
+      await $store.dispatch('settings/updateMediatorUrl', mediatorUrl.value)
+    }
+
     const defaultLanguage = computed({
       get: () => $store.state.settings.language,
       set: async val => {
@@ -216,12 +272,16 @@ export default defineComponent({
       filterFn,
       ocaRepoHelpExpanded,
       dataVaultHelpExpanded,
+      mediatorUrlHelpExpanded,
       ocaRepositoryUrls,
       addOcaRepositoryUrl,
       removeOcaRepositoryUrl,
       dataVaultUrls,
       addDataVaultUrl,
-      removeDataVaultUrl
+      removeDataVaultUrl,
+      removeMediatorUrl,
+      mediatorUrl,
+      storeMediatorUrl
     }
   }
 })
