@@ -14,8 +14,8 @@ const actions: ActionTree<SettingsStateInterface, StateInterface> = {
   updateLanguage({ commit }, value: string) {
     commit('updateLanguage', value)
   },
-  updateMediatorUrl({ commit }, value: string) {
-    commit('updateMediatorUrl', value)
+  updateAgentUrl({ commit }, value: string) {
+    commit('updateAgentUrl', value)
   }
 }
 

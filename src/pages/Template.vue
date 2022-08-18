@@ -96,14 +96,17 @@
           Generate
         </q-btn>
       </q-card-section>
+      <q-card-section> {{ errorMessage }} </q-card-section>
     </q-card>
   </q-page>
 </template>
 
 <script lang="ts">
 import { defineComponent, getCurrentInstance, ref } from 'vue'
-import { AxiosInstance } from 'axios'
 import { useStore } from '@/store'
+import { getCredentialDefinitions } from '@/services/getCredentialDefinitions'
+import { getSchemas } from '@/services/getSchemas'
+import { createCustomTemplate } from '@/components/createCustomTemplate'
 
 export default defineComponent({
   name: 'Template',
@@ -112,9 +115,8 @@ export default defineComponent({
     if (!currentInstance) {
       return
     }
-    const $axios = currentInstance.appContext.config.globalProperties
-      .$axios as AxiosInstance
     const $store = useStore()
+    const errorMessage = ref('')
     const templateHelpExpanded = ref(true)
     const languages = ref([ref('en')])
     const schemaIdentifier = ref('')
@@ -130,20 +132,30 @@ export default defineComponent({
     const removeSchemaIdentifier = () => {
       schemaIdentifier.value = ''
     }
-
+    /* eslint-disable */
     const generateTemplate = async () => {
-      const credentialDefinitionResponse = await $axios.get(
-        `${$store.state.settings.mediatorUrl}credential-definition/${schemaIdentifier.value}`,
-        {
-          headers: {
-            'Access-Control-Allow-Origin': '*'
-          }
-        }
-      )
-      console.log(credentialDefinitionResponse)
+      let schemaId = schemaIdentifier.value
+      let attributesNames: string[] = []
+      const basePath = $store.state.settings.agentUrl
+
+      try{
+        schemaId = (await getCredentialDefinitions(basePath, schemaIdentifier.value)).schemaId
+      } catch (err) {
+        console.warn('Unable to fetch the credential definition')
+      }
+
+      try{
+        attributesNames = (await getSchemas(basePath, schemaId)).attrNames
+        createCustomTemplate(languages, attributesNames)
+        errorMessage.value = ""
+      } catch(err) {
+        errorMessage.value = "**Impossible to retrieve the attributes from the information provided. Make sure that the Credential Definition Id is correct and that you use the good Agent URL in the setting page."
+      }
     }
 
     return {
+
+      errorMessage,
       removeLanguage,
       addLanguage,
       templateHelpExpanded,

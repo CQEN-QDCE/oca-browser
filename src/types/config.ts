@@ -3,6 +3,6 @@ export type Config = {
     OCA_REPOSITORY_URLS: string
     DATA_VAULT_URLS: string
     DEFAULT_LANGUAGE: string
-    DEFAULT_MEDIATOR_URL: string
+    DEFAULT_AGENT_URL: string
   }
 }

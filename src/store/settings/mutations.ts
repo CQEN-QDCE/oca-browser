@@ -14,8 +14,8 @@ const mutation: MutationTree<SettingsStateInterface> = {
     state.language = value
   },
 
-  updateMediatorUrl(state: SettingsStateInterface, value: string) {
-    state.mediatorUrl = value
+  updateAgentUrl(state: SettingsStateInterface, value: string) {
+    state.agentUrl = value
   }
 }
 
