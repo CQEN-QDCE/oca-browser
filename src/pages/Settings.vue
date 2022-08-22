@@ -206,7 +206,7 @@ export default defineComponent({
     const dataVaultHelpExpanded = ref(true)
     const agentUrlHelpExpanded = ref(true)
 
-    const agentUrl = ref($store.state.settings.agentUrl)
+    const agentUrl: Ref<string> = ref($store.state.settings.agentUrl)
 
     const ocaRepositoryUrls = ref(
       $store.state.settings.ocaRepositoryUrls.map(el => ref(el))
