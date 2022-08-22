@@ -70,7 +70,9 @@ export const createCustomTemplate = (
   sheetLang['!cols'] = sheetColsStyle
 
   languages.value.forEach(language => {
-    XLSX.utils.book_append_sheet(workbook, sheetLang, language.value)
+    if (language.value.length > 0) {
+      XLSX.utils.book_append_sheet(workbook, sheetLang, language.value)
+    }
   })
 
   XLSX.writeFileXLSX(workbook, 'custom_template.xlsx')
