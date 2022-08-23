@@ -59,7 +59,27 @@
       </q-slide-transition>
 
       <q-separator />
-
+      <q-card-section>
+        You can specify your credential definition id to validate the attributes
+        of your template.
+      </q-card-section>
+      <q-card-section>
+        <q-separator />
+        <div class="row items-center q-ma-sm">
+          <q-icon
+            name="remove_circle_outline"
+            class="col-1 cursor-pointer"
+            size="sm"
+            left
+            :disabled="true"
+            @click="removeSchemaIdentifier()" />
+          <q-input
+            v-model="schemaIdentifier"
+            class="col"
+            label="CredDef"
+            dense />
+        </div>
+      </q-card-section>
       <q-card-section>
         <q-file
           v-model="rootFile"
@@ -87,7 +107,10 @@
           Convert
         </q-btn>
         <br />
+        <br />
         <!-- eslint-disable vue/no-v-html -->
+        <span v-html="convertionSchemaAttributesResult" />
+        <br />
         <span v-html="convertionResult" />
         <!-- eslint-enable vue/no-v-html -->
       </q-card-section>
@@ -98,6 +121,10 @@
 <script lang="ts">
 import { defineComponent, ref, getCurrentInstance } from 'vue'
 import { AxiosInstance } from 'axios'
+import * as XLSX from 'xlsx'
+import { getCredentialDefinitions } from '@/services/getCredentialDefinitions'
+import { getSchemas } from '@/services/getSchemas'
+import { useStore } from '@/store'
 
 export default defineComponent({
   name: 'Develop',
@@ -108,17 +135,72 @@ export default defineComponent({
     }
     const $axios = currentInstance.appContext.config.globalProperties
       .$axios as AxiosInstance
+    const $store = useStore()
     const converterHelpExpanded = ref(true)
     const rootFile = ref()
     const referenceFiles = ref([])
     const credentialLayoutFile = ref()
     const formLayoutFile = ref()
     const convertionResult = ref('')
+    const convertionSchemaAttributesResult = ref('')
+    const schemaIdentifier = ref('')
 
     const ocaConverterUrl = 'https://tool.oca.argo.colossi.network'
 
     /* eslint-disable */
     const convert = async () => {
+
+      if(schemaIdentifier.value.length > 0){
+        let mainSheetJson: any[] = [];
+        const fileReader = await new FileReader()
+        fileReader.readAsArrayBuffer(rootFile.value)
+
+        fileReader.onload = (e: any) => {
+          const bufferArray= e?.target.result
+          const wb = XLSX.read(bufferArray, {type: 'buffer'})
+          const mainSheet = wb.Sheets['Main']
+          mainSheetJson = XLSX.utils.sheet_to_json(mainSheet)
+        }
+
+
+        let schemaId = schemaIdentifier.value
+        const basePath = $store.state.settings.agentUrl
+        let attributesNames: string[] = []
+        try{
+          schemaId = (await getCredentialDefinitions(basePath, schemaIdentifier.value)).schemaId
+        } catch (err) {
+          console.warn('Unable to fetch the credential definition')
+        }
+        const undeclaredAttributes: string[] = []
+        try{
+          attributesNames = (await getSchemas(basePath, schemaId)).attrNames
+          convertionSchemaAttributesResult.value = "Successfully fetch the schema."
+
+          attributesNames.forEach((attributeName) => {
+            let isAttributeNameDeclare = false
+            mainSheetJson.forEach((row) => {
+              if(attributeName == row['CB: Attribute Name']){
+                isAttributeNameDeclare = true
+              }
+            })
+            if(!isAttributeNameDeclare){
+              undeclaredAttributes.push(attributeName)
+            }
+          })
+          if(undeclaredAttributes.length > 0){
+            convertionSchemaAttributesResult.value += `<br /> Missing attribute(s):`
+            undeclaredAttributes.forEach((undeclaredAttribute) => {
+              convertionSchemaAttributesResult.value += `<li>${undeclaredAttribute}</li>`
+            })
+          }
+        } catch(err) {
+          convertionSchemaAttributesResult.value = "**Impossible to retrieve the attributes with the information provided. Make sure that the Credential Definition Id is correct and that you use the good Agent URL in the setting page."
+        }
+      } else {
+        convertionSchemaAttributesResult.value = "Schema attribute validation skipped."
+      }
+
+
       const formData = new FormData()
       formData.append('file', rootFile.value)
       referenceFiles.value.forEach((file: File) =>
@@ -154,14 +236,21 @@ export default defineComponent({
       formLayoutFile.value = null
     }
 
+    const removeSchemaIdentifier = () => {
+      schemaIdentifier.value = ''
+    }
+
     return {
       convert,
       converterHelpExpanded,
       convertionResult,
+      convertionSchemaAttributesResult,
       rootFile,
       referenceFiles,
       credentialLayoutFile,
-      formLayoutFile
+      formLayoutFile,
+      schemaIdentifier,
+      removeSchemaIdentifier
     }
   }
 })
