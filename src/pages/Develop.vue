@@ -151,7 +151,8 @@ export default defineComponent({
     const convert = async () => {
 
       if(schemaIdentifier.value.length > 0){
-        let mainSheetJson: any[] = [];
+        let mainSheetJson: any[] = []
+        let attributesCol = ''
         const fileReader = await new FileReader()
         fileReader.readAsArrayBuffer(rootFile.value)
 
@@ -159,9 +160,13 @@ export default defineComponent({
           const bufferArray= e?.target.result
           const wb = XLSX.read(bufferArray, {type: 'buffer'})
           const mainSheet = wb.Sheets['Main']
-          mainSheetJson = XLSX.utils.sheet_to_json(mainSheet)
+          mainSheetJson = XLSX.utils.sheet_to_json(mainSheet, {header: 'A'})
+          Object.entries(mainSheetJson[0]).forEach(([key, value]) => {
+            if(value == 'CB: Attribute Name'){
+              attributesCol = key
+            }
+          })
         }
-
 
         let schemaId = schemaIdentifier.value
         const basePath = $store.state.settings.agentUrl
@@ -171,25 +176,26 @@ export default defineComponent({
         } catch (err) {
           console.warn('Unable to fetch the credential definition')
         }
-        const undeclaredAttributes: string[] = []
+        const missingAttributes: string[] = []
         try{
           attributesNames = (await getSchemas(basePath, schemaId)).attrNames
           convertionSchemaAttributesResult.value = "Successfully fetch the schema."
 
+
           attributesNames.forEach((attributeName) => {
             let isAttributeNameDeclare = false
-            mainSheetJson.forEach((row) => {
-              if(attributeName == row['CB: Attribute Name']){
+            mainSheetJson.map((entry) => {
+              if(attributeName == entry[attributesCol]){
                 isAttributeNameDeclare = true
               }
             })
             if(!isAttributeNameDeclare){
-              undeclaredAttributes.push(attributeName)
+              missingAttributes.push(attributeName)
             }
           })
-          if(undeclaredAttributes.length > 0){
+          if(missingAttributes.length > 0){
             convertionSchemaAttributesResult.value += `<br /> Missing attribute(s):`
-            undeclaredAttributes.forEach((undeclaredAttribute) => {
+            missingAttributes.forEach((undeclaredAttribute) => {
               convertionSchemaAttributesResult.value += `<li>${undeclaredAttribute}</li>`
             })
           }
