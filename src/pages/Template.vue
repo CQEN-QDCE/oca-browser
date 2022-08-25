@@ -103,10 +103,9 @@
 
 <script lang="ts">
 import { defineComponent, getCurrentInstance, ref } from 'vue'
-import { useStore } from '@/store'
-import { getCredentialDefinitions } from '@/services/getCredentialDefinitions'
-import { getSchemas } from '@/services/getSchemas'
 import { createCustomTemplate } from '@/components/createCustomTemplate'
+import { getSchemaAttributes } from '@/components/getSchemaAttributes'
+import { useStore } from '@/store'
 
 export default defineComponent({
   name: 'Template',
@@ -116,6 +115,7 @@ export default defineComponent({
       return
     }
     const $store = useStore()
+    const basePath = $store.state.settings.agentUrl
     const errorMessage = ref('')
     const templateHelpExpanded = ref(true)
     const languages = ref([ref('en')])
@@ -132,29 +132,23 @@ export default defineComponent({
     const removeSchemaIdentifier = () => {
       schemaIdentifier.value = ''
     }
-    /* eslint-disable */
     const generateTemplate = async () => {
-      let schemaId = schemaIdentifier.value
       let attributesNames: string[] = []
-      const basePath = $store.state.settings.agentUrl
 
-      try{
-        schemaId = (await getCredentialDefinitions(basePath, schemaIdentifier.value)).schemaId
-      } catch (err) {
-        console.warn('Unable to fetch the credential definition')
-      }
-
-      try{
-        attributesNames = (await getSchemas(basePath, schemaId)).attrNames
+      try {
+        attributesNames = await getSchemaAttributes(
+          basePath,
+          schemaIdentifier.value
+        )
         createCustomTemplate(languages, attributesNames)
-        errorMessage.value = ""
-      } catch(err) {
-        errorMessage.value = "**Impossible to retrieve the attributes from the information provided. Make sure that the Credential Definition Id is correct and that you use the good Agent URL in the setting page."
+        errorMessage.value = ''
+      } catch (err) {
+        // eslint-disable-next-line
+        errorMessage.value = err.message
       }
     }
 
     return {
-
       errorMessage,
       removeLanguage,
       addLanguage,

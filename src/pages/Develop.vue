@@ -122,9 +122,9 @@
 import { defineComponent, ref, getCurrentInstance } from 'vue'
 import { AxiosInstance } from 'axios'
 import * as XLSX from 'xlsx'
-import { getCredentialDefinitions } from '@/services/getCredentialDefinitions'
-import { getSchemas } from '@/services/getSchemas'
 import { useStore } from '@/store'
+import { attributesValidation } from '@/components/attributesValidation'
+import { getSchemaAttributes } from '@/components/getSchemaAttributes'
 
 export default defineComponent({
   name: 'Develop',
@@ -151,61 +151,42 @@ export default defineComponent({
     const convert = async () => {
 
       if(schemaIdentifier.value.length > 0){
-        let mainSheetJson: any[] = []
-        let attributesCol = ''
+        const basePath = $store.state.settings.agentUrl
+        let attributesNames: string[] = []
         const fileReader = await new FileReader()
+        let wb: XLSX.WorkBook | undefined = undefined;
+
         fileReader.readAsArrayBuffer(rootFile.value)
 
         fileReader.onload = (e: any) => {
           const bufferArray= e?.target.result
-          const wb = XLSX.read(bufferArray, {type: 'buffer'})
-          const mainSheet = wb.Sheets['Main']
-          mainSheetJson = XLSX.utils.sheet_to_json(mainSheet, {header: 'A'})
-          Object.entries(mainSheetJson[0]).forEach(([key, value]) => {
-            if(value == 'CB: Attribute Name'){
-              attributesCol = key
-            }
-          })
+          wb = XLSX.read(bufferArray, {type: 'buffer'})
         }
-
-        let schemaId = schemaIdentifier.value
-        const basePath = $store.state.settings.agentUrl
-        let attributesNames: string[] = []
         try{
-          schemaId = (await getCredentialDefinitions(basePath, schemaIdentifier.value)).schemaId
-        } catch (err) {
-          console.warn('Unable to fetch the credential definition')
-        }
-        const missingAttributes: string[] = []
-        try{
-          attributesNames = (await getSchemas(basePath, schemaId)).attrNames
+          attributesNames = await getSchemaAttributes(basePath, schemaIdentifier.value)
           convertionSchemaAttributesResult.value = "Successfully fetch the schema."
-
-
-          attributesNames.forEach((attributeName) => {
-            let isAttributeNameDeclare = false
-            mainSheetJson.map((entry) => {
-              if(attributeName == entry[attributesCol]){
-                isAttributeNameDeclare = true
-              }
-            })
-            if(!isAttributeNameDeclare){
-              missingAttributes.push(attributeName)
-            }
-          })
-          if(missingAttributes.length > 0){
-            convertionSchemaAttributesResult.value += `<br /> Missing attribute(s):`
-            missingAttributes.forEach((undeclaredAttribute) => {
-              convertionSchemaAttributesResult.value += `<li>${undeclaredAttribute}</li>`
-            })
-          }
-        } catch(err) {
-          convertionSchemaAttributesResult.value = "**Impossible to retrieve the attributes with the information provided. Make sure that the Credential Definition Id is correct and that you use the good Agent URL in the setting page."
+        } catch (err) {
+          convertionSchemaAttributesResult.value = err.message
         }
-      } else {
-        convertionSchemaAttributesResult.value = "Schema attribute validation skipped."
-      }
 
+         if (wb != undefined){
+           const sheets = (wb as XLSX.WorkBook).Sheets
+           Object.entries(sheets).map(([key, _]) => {
+             if(key != 'READ ME'){
+               const schemaErrors = attributesValidation(attributesNames, wb.Sheets[key])
+               if(schemaErrors.length > 0){
+                 convertionSchemaAttributesResult.value += `<br /> Missing attribute(s) in sheet "${key}":`
+                 schemaErrors.forEach((error) => {
+                   convertionSchemaAttributesResult.value += `<li>${error}</li>`
+                 })
+               }
+             }
+           })
+         }
+      } else {
+        convertionSchemaAttributesResult.value =
+          'Schema attributes validation skipped.'
+      }
 
       const formData = new FormData()
       formData.append('file', rootFile.value)
@@ -229,7 +210,7 @@ export default defineComponent({
         const errors: string[] = responseResult.errors
         console.error(errors)
         convertionResult.value = 'Failure! Fix those errors and try again: <ul>'
-        errors.forEach(e => convertionResult.value += `<li>${e}</li>`)
+        errors.forEach(e => (convertionResult.value += `<li>${e}</li>`))
         convertionResult.value += '</ul>'
       }
     }
