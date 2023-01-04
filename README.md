@@ -1,5 +1,5 @@
 [![img](https://img.shields.io/badge/Cycle%20de%20Vie-Phase%20D%C3%A9couverte-339999)](https://www.quebec.ca/gouv/politiques-orientations/vitrine-numeriqc/accompagnement-des-organismes-publics/demarche-conception-services-numeriques)
-[![License](https://img.shields.io/badge/Licence-Apache--2.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/licence-EUPL--1.2-blue)](LICENSE)
 
 ---
 
