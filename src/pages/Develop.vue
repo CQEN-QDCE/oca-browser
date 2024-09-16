@@ -24,10 +24,7 @@
             <ul>
               <li>
                 <b>OCA file [required] (XLS/XLSX)</b><br />
-                <a
-                  href="https://github.com/THCLab/oca-ecosystem/raw/main/examples/template.xlsx">
-                  Download template</a
-                >.
+                <a href="/#/template"> Download template</a>.
               </li>
               <li>
                 <b>OCA references files (XLS/XLSX)</b><br />
@@ -62,7 +59,27 @@
       </q-slide-transition>
 
       <q-separator />
-
+      <q-card-section>
+        You can specify your credential definition id to validate the attributes
+        of your template.
+      </q-card-section>
+      <q-card-section>
+        <q-separator />
+        <div class="row items-center q-ma-sm">
+          <q-icon
+            name="remove_circle_outline"
+            class="col-1 cursor-pointer"
+            size="sm"
+            left
+            :disabled="true"
+            @click="removeSchemaIdentifier()" />
+          <q-input
+            v-model="schemaIdentifier"
+            class="col"
+            label="CredDef"
+            dense />
+        </div>
+      </q-card-section>
       <q-card-section>
         <q-file
           v-model="rootFile"
@@ -90,7 +107,10 @@
           Convert
         </q-btn>
         <br />
+        <br />
         <!-- eslint-disable vue/no-v-html -->
+        <span v-html="convertionSchemaAttributesResult" />
+        <br />
         <span v-html="convertionResult" />
         <!-- eslint-enable vue/no-v-html -->
       </q-card-section>
@@ -101,6 +121,10 @@
 <script lang="ts">
 import { defineComponent, ref, getCurrentInstance } from 'vue'
 import { AxiosInstance } from 'axios'
+import * as XLSX from 'xlsx'
+import { useStore } from '@/store'
+import { attributesValidation } from '@/components/attributesValidation'
+import { getSchemaAttributes } from '@/components/getSchemaAttributes'
 
 export default defineComponent({
   name: 'Develop',
@@ -111,17 +135,59 @@ export default defineComponent({
     }
     const $axios = currentInstance.appContext.config.globalProperties
       .$axios as AxiosInstance
+    const $store = useStore()
     const converterHelpExpanded = ref(true)
     const rootFile = ref()
     const referenceFiles = ref([])
     const credentialLayoutFile = ref()
     const formLayoutFile = ref()
     const convertionResult = ref('')
+    const convertionSchemaAttributesResult = ref('')
+    const schemaIdentifier = ref('')
 
     const ocaConverterUrl = 'https://tool.oca.argo.colossi.network'
 
     /* eslint-disable */
     const convert = async () => {
+
+      if(schemaIdentifier.value.length > 0){
+        const basePath = $store.state.settings.agentUrl
+        let attributesNames: string[] = []
+        const fileReader = await new FileReader()
+        let wb: XLSX.WorkBook | undefined = undefined;
+
+        fileReader.readAsArrayBuffer(rootFile.value)
+
+        fileReader.onload = (e: any) => {
+          const bufferArray= e?.target.result
+          wb = XLSX.read(bufferArray, {type: 'buffer'})
+        }
+        try{
+          attributesNames = await getSchemaAttributes(basePath, schemaIdentifier.value)
+          convertionSchemaAttributesResult.value = "Successfully fetch the schema."
+        } catch (err) {
+          convertionSchemaAttributesResult.value = err.message
+        }
+
+         if (wb != undefined){
+           const sheets = (wb as XLSX.WorkBook).Sheets
+           Object.entries(sheets).map(([key, _]) => {
+             if(key != 'READ ME'){
+               const schemaErrors = attributesValidation(attributesNames, wb.Sheets[key])
+               if(schemaErrors.length > 0){
+                 convertionSchemaAttributesResult.value += `<br /> Missing attribute(s) in sheet "${key}":`
+                 schemaErrors.forEach((error) => {
+                   convertionSchemaAttributesResult.value += `<li>${error}</li>`
+                 })
+               }
+             }
+           })
+         }
+      } else {
+        convertionSchemaAttributesResult.value =
+          'Schema attributes validation skipped.'
+      }
+
       const formData = new FormData()
       formData.append('file', rootFile.value)
       referenceFiles.value.forEach((file: File) =>
@@ -144,7 +210,7 @@ export default defineComponent({
         const errors: string[] = responseResult.errors
         console.error(errors)
         convertionResult.value = 'Failure! Fix those errors and try again: <ul>'
-        errors.forEach(e => convertionResult.value += `<li>${e}</li>`)
+        errors.forEach(e => (convertionResult.value += `<li>${e}</li>`))
         convertionResult.value += '</ul>'
       }
     }
@@ -157,14 +223,21 @@ export default defineComponent({
       formLayoutFile.value = null
     }
 
+    const removeSchemaIdentifier = () => {
+      schemaIdentifier.value = ''
+    }
+
     return {
       convert,
       converterHelpExpanded,
       convertionResult,
+      convertionSchemaAttributesResult,
       rootFile,
       referenceFiles,
       credentialLayoutFile,
-      formLayoutFile
+      formLayoutFile,
+      schemaIdentifier,
+      removeSchemaIdentifier
     }
   }
 })

@@ -28,7 +28,7 @@
       bordered
       class="bg-blue-2"
       :width="240">
-      <q-scroll-area class="fit">
+      <q-scroll-area class="fit" style="overflow: hidden">
         <q-list padding>
           <div v-for="(modulesBlock, i) in modules" :key="i">
             <q-item
@@ -64,6 +64,11 @@ const modules = [
       title: 'Develop',
       icon: 'architecture',
       path: '/'
+    },
+    {
+      title: 'Template',
+      icon: 'description',
+      path: '/template'
     },
     {
       title: 'Preview',
