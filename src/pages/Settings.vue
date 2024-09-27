@@ -144,6 +144,49 @@
               @click="addDataVaultUrl" />
           </div>
         </q-card-section>
+
+        <q-card-section>
+          <div class="row items-center">
+            <div class="text-subtitle1">Agent URL</div>
+            <q-btn
+              color="grey"
+              round
+              flat
+              dense
+              :icon="agentUrlHelpExpanded ? 'help_outline' : 'help'"
+              @click="agentUrlHelpExpanded = !agentUrlHelpExpanded" />
+          </div>
+
+          <q-slide-transition>
+            <div v-show="agentUrlHelpExpanded">
+              <q-separator />
+              <q-card-section class="text-subitle2">
+                Agent URL let you put the reference path to be able to retrieve
+                your credential definition. That let you generate a pre-fill
+                template and validate the attributes of your OCA bundle to be
+                sure it match your schema.
+              </q-card-section>
+            </div>
+          </q-slide-transition>
+
+          <q-separator />
+
+          <div class="row items-center">
+            <q-icon
+              name="remove_circle_outline"
+              class="col-1 cursor-pointer"
+              size="sm"
+              left
+              disabled="true"
+              @click="removeAgentUrl" />
+            <q-input
+              v-model="agentUrl"
+              class="col"
+              label="Agent URL"
+              dense
+              @blur="storeAgentUrl" />
+          </div>
+        </q-card-section>
       </q-card-section>
     </q-card>
   </q-page>
@@ -161,6 +204,9 @@ export default defineComponent({
     const languages = ref(l)
     const ocaRepoHelpExpanded = ref(true)
     const dataVaultHelpExpanded = ref(true)
+    const agentUrlHelpExpanded = ref(true)
+
+    const agentUrl: Ref<string> = ref($store.state.settings.agentUrl)
 
     const ocaRepositoryUrls = ref(
       $store.state.settings.ocaRepositoryUrls.map(el => ref(el))
@@ -170,6 +216,9 @@ export default defineComponent({
     }
     const removeOcaRepositoryUrl = (i: number) => {
       ocaRepositoryUrls.value.splice(i, 1)
+    }
+    const removeAgentUrl = () => {
+      agentUrl.value = ''
     }
     watch(ocaRepositoryUrls.value, async (value: Ref<string>[]) => {
       await $store.dispatch(
@@ -194,6 +243,13 @@ export default defineComponent({
       )
     })
 
+    const storeAgentUrl = async () => {
+      if (agentUrl.value[agentUrl.value.length - 1] != '/') {
+        agentUrl.value = agentUrl.value + '/'
+      }
+      await $store.dispatch('settings/updateAgentUrl', agentUrl.value)
+    }
+
     const defaultLanguage = computed({
       get: () => $store.state.settings.language,
       set: async val => {
@@ -216,12 +272,16 @@ export default defineComponent({
       filterFn,
       ocaRepoHelpExpanded,
       dataVaultHelpExpanded,
+      agentUrlHelpExpanded,
       ocaRepositoryUrls,
       addOcaRepositoryUrl,
       removeOcaRepositoryUrl,
       dataVaultUrls,
       addDataVaultUrl,
-      removeDataVaultUrl
+      removeDataVaultUrl,
+      removeAgentUrl,
+      agentUrl,
+      storeAgentUrl
     }
   }
 })

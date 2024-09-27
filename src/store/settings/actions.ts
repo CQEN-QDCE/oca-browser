@@ -13,6 +13,9 @@ const actions: ActionTree<SettingsStateInterface, StateInterface> = {
   },
   updateLanguage({ commit }, value: string) {
     commit('updateLanguage', value)
+  },
+  updateAgentUrl({ commit }, value: string) {
+    commit('updateAgentUrl', value)
   }
 }
 

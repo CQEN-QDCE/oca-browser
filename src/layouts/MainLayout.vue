@@ -66,6 +66,11 @@ const modules = [
       path: '/'
     },
     {
+      title: 'Template',
+      icon: 'description',
+      path: '/template'
+    },
+    {
       title: 'Preview',
       icon: 'preview',
       path: '/preview'
